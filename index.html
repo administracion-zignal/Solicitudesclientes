@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; style-src * 'unsafe-inline';">
     
-    <title>Zignal Agency | Dashboard Cloud</title>
+    <title>Zignal Agency | Dashboard Cloud Pro</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
+    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
@@ -20,7 +23,16 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { zignal: { blue: '#0066FF', cyan: '#00E5FF', dark: '#0B1120', light: '#F0F9FF', gray: '#1E293B', danger: '#EF4444' } }
+                    colors: { 
+                        zignal: { 
+                            blue: '#0066FF', 
+                            cyan: '#00E5FF', 
+                            dark: '#0B1120', 
+                            light: '#F0F9FF', 
+                            gray: '#1E293B', 
+                            danger: '#EF4444' 
+                        } 
+                    }
                 }
             }
         }
@@ -28,32 +40,34 @@
 
     <style>
         body { background-color: #F8FAFC; -webkit-tap-highlight-color: transparent; }
-        .calendar-day:active { transform: scale(0.98); }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="text-slate-800 antialiased pb-24">
+<body class="text-slate-800 antialiased pb-10">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- CONFIGURACIÓN SUPABASE ---
-        const SUPABASE_URL = 'COLOCA_AQUI_TU_URL_DE_SUPABASE'; 
-        const SUPABASE_KEY = 'COLOCA_AQUI_TU_ANON_KEY_DE_SUPABASE';
+        // --- 3. CONFIGURACIÓN DE TU NUBE (SUPABASE) ---
+        // Reemplaza los valores entre comillas con los de tu imagen ce955e
+        const SUPABASE_URL = 'https://vknnukcicqkufdhutuip.supabase.co'; 
+        const SUPABASE_KEY = 'https://vknnukcicqkufdhutuip.supabase.co'; // Valor de "anon public"
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- ICON COMPONENT ---
+        // Componente de Iconos
         const Icon = ({ name, size = 18, className = "" }) => {
-            const svgContent = useMemo(() => {
-                if (!window.lucide || !window.lucide.icons || !window.lucide.icons[name]) return null;
-                const element = window.lucide.createElement(window.lucide.icons[name]);
-                element.setAttribute('width', size);
-                element.setAttribute('height', size);
-                return { __html: element.outerHTML };
+            const svg = useMemo(() => {
+                if (!window.lucide || !window.lucide.icons[name]) return null;
+                const el = window.lucide.createElement(window.lucide.icons[name]);
+                el.setAttribute('width', size);
+                el.setAttribute('height', size);
+                return { __html: el.outerHTML };
             }, [name, size]);
-            return svgContent ? <span dangerouslySetInnerHTML={svgContent} className={`inline-flex items-center ${className}`} /> : null;
+            return svg ? <span dangerouslySetInnerHTML={svg} className={`inline-flex items-center justify-center ${className}`} /> : null;
         };
 
         const App = () => {
@@ -62,13 +76,12 @@
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [loading, setLoading] = useState(true);
 
-            // 1. CARGAR DATOS DESDE LA NUBE (SUPABASE)
+            // 4. CARGAR DATOS DESDE LA BASE DE DATOS
             const fetchTasks = async () => {
-                setLoading(true);
                 const { data, error } = await supabaseClient
                     .from('solicitudes')
                     .select('*')
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false });
                 
                 if (!error) setTasks(data);
                 setLoading(false);
@@ -76,10 +89,10 @@
 
             useEffect(() => {
                 fetchTasks();
-                
-                // ESCUCHAR CAMBIOS EN TIEMPO REAL
+
+                // 5. TIEMPO REAL: Si alguien cambia algo en otro PC, esto se actualiza solo
                 const channel = supabaseClient
-                    .channel('cambios-reales')
+                    .channel('schema-db-changes')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes' }, () => {
                         fetchTasks();
                     })
@@ -88,110 +101,109 @@
                 return () => supabaseClient.removeChannel(channel);
             }, []);
 
-            // 2. GUARDAR EN LA NUBE
-            const handleSave = async (formData) => {
-                const payload = {
-                    campaign_name: formData.campaignName,
-                    requester: formData.requester,
-                    format: formData.format,
-                    status: formData.status,
-                    priority: formData.priority,
-                    deadline: formData.deadline,
-                    description: formData.description,
-                    included_in_plan: formData.includedInPlan,
-                    price: formData.price
+            // 6. GUARDAR NUEVA SOLICITUD EN LA NUBE
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const nuevaTarea = {
+                    campaign_name: formData.get('campaign'),
+                    status: formData.get('status'),
+                    priority: formData.get('priority'),
+                    requester: formData.get('requester'),
+                    format: formData.get('format'),
+                    deadline: formData.get('deadline'),
+                    description: formData.get('description')
                 };
 
-                const { error } = await supabaseClient.from('solicitudes').insert([payload]);
-                if (error) alert("Error al guardar: " + error.message);
-                setIsModalOpen(false);
+                const { error } = await supabaseClient.from('solicitudes').insert([nuevaTarea]);
+
+                if (error) {
+                    alert("Error al sincronizar: " + error.message);
+                } else {
+                    setIsModalOpen(false);
+                    fetchTasks(); // Actualiza la lista
+                }
             };
 
             const filteredTasks = tasks.filter(t => view === 'active' ? t.status !== 'Finalized' : t.status === 'Finalized');
 
             return (
-                <div className="min-h-screen">
-                    <header className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-zignal-dark text-white p-2 rounded"><Icon name="Zap" /></div>
-                            <h1 className="font-bold text-xl">Zignal Agency Cloud</h1>
+                <div className="min-h-screen flex flex-col">
+                    {/* Header Pro */}
+                    <header className="bg-zignal-dark text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-zignal-blue p-2 rounded-lg shadow-inner"><Icon name="Zap" size={20} /></div>
+                            <h1 className="text-xl font-extrabold tracking-tight">ZIGNAL AGENCY <span className="text-zignal-cyan text-xs ml-1 font-mono uppercase">Cloud v2</span></h1>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-green-500 font-bold flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sincronizado
-                            </span>
+                        <div className="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-green-400">En Línea</span>
                         </div>
                     </header>
 
-                    <main className="max-w-7xl mx-auto p-4 space-y-6">
-                        {/* Toolbar */}
-                        <div className="flex justify-between bg-white p-3 rounded-xl border shadow-sm">
-                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                <button onClick={() => setView('active')} className={`px-4 py-2 rounded-md text-xs font-bold ${view === 'active' ? 'bg-white shadow text-zignal-dark' : 'text-gray-500'}`}>Activas</button>
-                                <button onClick={() => setView('history')} className={`px-4 py-2 rounded-md text-xs font-bold ${view === 'history' ? 'bg-white shadow text-zignal-dark' : 'text-gray-500'}`}>Historial</button>
+                    <main className="max-w-6xl mx-auto w-full p-4 md:p-8 space-y-6">
+                        {/* Control Panel */}
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border shadow-sm">
+                            <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+                                <button onClick={() => setView('active')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'active' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>TAREAS ACTIVAS</button>
+                                <button onClick={() => setView('history')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'history' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>HISTORIAL</button>
                             </div>
-                            <button onClick={() => setIsModalOpen(true)} className="bg-zignal-dark text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2">
-                                <Icon name="Plus" /> Nueva Solicitud
+                            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto bg-zignal-blue hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                                <Icon name="PlusCircle" /> NUEVA SOLICITUD
                             </button>
                         </div>
 
-                        {/* Listado */}
-                        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-                            {loading ? <div className="p-10 text-center">Cargando base de datos...</div> : (
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-[10px] uppercase text-gray-400 font-bold">
-                                        <tr>
-                                            <th className="p-4">Campaña</th>
-                                            <th className="p-4">Estatus</th>
-                                            <th className="p-4">Prioridad</th>
-                                            <th className="p-4 text-right">Entrega</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredTasks.map(t => (
-                                            <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="p-4 font-bold">{t.campaign_name}</td>
-                                                <td className="p-4 text-xs font-bold uppercase text-blue-600">{t.status}</td>
-                                                <td className="p-4 text-xs font-bold uppercase text-red-500">{t.priority}</td>
-                                                <td className="p-4 text-right text-gray-500 font-mono text-xs">{t.deadline}</td>
+                        {/* Listado Principal */}
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+                            {loading ? (
+                                <div className="p-20 text-center flex flex-col items-center gap-4">
+                                    <div className="w-10 h-10 border-4 border-zignal-blue border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-slate-400 font-medium">Conectando con la base de datos...</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase tracking-widest font-black text-slate-400">
+                                                <th className="p-5">Campaña / Cliente</th>
+                                                <th className="p-5">Estatus</th>
+                                                <th className="p-5">Prioridad</th>
+                                                <th className="p-5 text-right">Fecha Entrega</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {filteredTasks.length === 0 ? (
+                                                <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic font-medium">No hay registros en la nube actualmente</td></tr>
+                                            ) : filteredTasks.map(t => (
+                                                <tr key={t.id} className="group hover:bg-blue-50/50 transition-colors">
+                                                    <td className="p-5">
+                                                        <div className="font-bold text-slate-800 text-base">{t.campaign_name}</div>
+                                                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><Icon name="User" size={10} /> {t.requester || 'Sin asignar'}</div>
+                                                    </td>
+                                                    <td className="p-5">
+                                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100">{t.status}</span>
+                                                    </td>
+                                                    <td className="p-5">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${t.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>{t.priority}</span>
+                                                    </td>
+                                                    <td className="p-5 text-right font-mono text-xs text-slate-500 font-bold">{t.deadline}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
                     </main>
 
-                    {/* Modal Pro Prototipo */}
+                    {/* Modal Pro Sincronizado */}
                     {isModalOpen && (
-                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-                                <h2 className="text-xl font-bold mb-4">Nueva Solicitud Cloud</h2>
-                                <input id="cname" className="w-full p-3 border rounded-lg mb-4" placeholder="Nombre de Campaña..." />
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <select id="prio" className="p-3 border rounded-lg bg-white"><option>High</option><option>Medium</option><option>Low</option></select>
-                                    <input id="date" type="date" className="p-3 border rounded-lg" />
+                        <div className="fixed inset-0 bg-zignal-dark/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 fade-in">
+                            <form onSubmit={handleSave} className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200">
+                                <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="CloudUpload" className="text-zignal-blue" /> CREAR EN LA NUBE</h2>
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="XCircle" size={24} /></button>
                                 </div>
-                                <div className="flex justify-end gap-2">
-                                    <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-500">Cancelar</button>
-                                    <button onClick={() => {
-                                        handleSave({
-                                            campaignName: document.getElementById('cname').value,
-                                            priority: document.getElementById('prio').value,
-                                            deadline: document.getElementById('date').value,
-                                            status: 'Pending', requester: 'Admin', includedInPlan: true
-                                        });
-                                    }} className="bg-zignal-dark text-white px-6 py-2 rounded-lg font-bold">Sincronizar</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html> 
+                                
+                                <div className="p-
