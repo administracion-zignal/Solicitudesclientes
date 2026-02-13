@@ -6,13 +6,14 @@
     
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; style-src * 'unsafe-inline';">
     
-    <title>Zignal Agency | Dashboard Cloud Pro</title>
+    <title>Zignal Agency | Creative Dashboard Cloud</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
+    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -27,6 +28,7 @@
                             blue: '#0066FF', 
                             cyan: '#00E5FF', 
                             dark: '#0B1120', 
+                            light: '#F0F9FF', 
                             gray: '#1E293B'
                         } 
                     }
@@ -49,10 +51,9 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- CONFIGURACIÓN DE CONEXIÓN REAL ---
+        // --- CONFIGURACIÓN DE NUBE REAL (SUPABASE) ---
         const SUPABASE_URL = 'https://vknnukcicqkufdhutuip.supabase.co'; 
-        // SUSTITUYE 'TU_API_KEY_AQUI' POR LA CLAVE LARGA QUE COPIASTE (LA QUE EMPIEZA POR eyJ...)
-        const SUPABASE_KEY = 'TU_API_KEY_AQUI'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbm51a2NpY3FrdWZkaHV0dWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk0NTI3NDAsImV4cCI6MjA1NTAyODc0MH0.xV8A56N_9i-xL8S_2XvjA8uL1nO-R28I_xM7-U1-G9Y'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const Icon = ({ name, size = 18, className = "" }) => {
@@ -72,6 +73,7 @@
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [loading, setLoading] = useState(true);
 
+            // Cargar datos desde Supabase
             const fetchTasks = async () => {
                 const { data, error } = await supabaseClient
                     .from('solicitudes')
@@ -84,8 +86,10 @@
 
             useEffect(() => {
                 fetchTasks();
+
+                // Sincronización en tiempo real: Actualiza si alguien más guarda algo
                 const channel = supabaseClient
-                    .channel('schema-db-changes')
+                    .channel('db-changes')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes' }, () => {
                         fetchTasks();
                     })
@@ -94,6 +98,7 @@
                 return () => supabaseClient.removeChannel(channel);
             }, []);
 
+            // Guardar en la Nube
             const handleSave = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
@@ -111,7 +116,7 @@
                 const { error } = await supabaseClient.from('solicitudes').insert([nuevaTarea]);
 
                 if (error) {
-                    alert("Error de conexión: " + error.message);
+                    alert("Error de sincronización: " + error.message);
                 } else {
                     setIsModalOpen(false);
                     fetchTasks();
@@ -122,61 +127,64 @@
 
             return (
                 <div className="min-h-screen flex flex-col">
+                    {/* Header Estilo Zignal */}
                     <header className="bg-zignal-dark text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
                         <div className="flex items-center gap-3">
                             <div className="bg-zignal-blue p-2 rounded-lg"><Icon name="Zap" size={20} /></div>
-                            <h1 className="text-xl font-extrabold tracking-tight">ZIGNAL AGENCY <span className="text-zignal-cyan text-xs ml-1">CLOUD PRO</span></h1>
+                            <h1 className="text-xl font-extrabold tracking-tight">ZIGNAL AGENCY <span className="text-zignal-cyan text-[10px] ml-1 font-mono uppercase tracking-widest">CLOUD PRO</span></h1>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                            <span className="text-[10px] font-bold uppercase text-green-400">Sincronizado</span>
+                        <div className="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700 shadow-inner">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
+                            <span className="text-[10px] font-black uppercase text-green-400">Sincronizado</span>
                         </div>
                     </header>
 
                     <main className="max-w-6xl mx-auto w-full p-4 md:p-8 space-y-6">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border shadow-sm">
+                        {/* Selector de Vista y Botón Acción */}
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                             <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-                                <button onClick={() => setView('active')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'active' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>TAREAS ACTIVAS</button>
-                                <button onClick={() => setView('history')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'history' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>HISTORIAL</button>
+                                <button onClick={() => setView('active')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black transition-all ${view === 'active' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-400'}`}>TAREAS ACTIVAS</button>
+                                <button onClick={() => setView('history')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black transition-all ${view === 'history' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-400'}`}>HISTORIAL</button>
                             </div>
-                            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto bg-zignal-blue hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+                            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto bg-zignal-blue hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-black shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition-transform active:scale-95">
                                 <Icon name="PlusCircle" /> NUEVA SOLICITUD
                             </button>
                         </div>
 
-                        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+                        {/* Tabla de Registros */}
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden min-h-[400px]">
                             {loading ? (
-                                <div className="p-20 text-center flex flex-col items-center gap-4">
+                                <div className="flex flex-col items-center justify-center h-full py-32 gap-4">
                                     <div className="w-10 h-10 border-4 border-zignal-blue border-t-transparent rounded-full animate-spin"></div>
-                                    <p className="text-slate-400 font-medium">Accediendo a la nube...</p>
+                                    <p className="text-slate-400 font-bold animate-pulse uppercase text-xs tracking-widest">Accediendo a la nube...</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase tracking-widest font-black text-slate-400">
-                                                <th className="p-5">Campaña / Cliente</th>
+                                                <th className="p-5">Campaña / Solicitante</th>
                                                 <th className="p-5">Estatus</th>
-                                                <th className="p-5">Prioridad</th>
+                                                <th className="p-5 text-center">Prioridad</th>
                                                 <th className="p-5 text-right">Fecha Entrega</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {filteredTasks.length === 0 ? (
-                                                <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic font-medium">No hay registros almacenados</td></tr>
+                                                <tr><td colSpan="4" className="p-24 text-center text-slate-300 italic font-medium">No hay registros en la base de datos</td></tr>
                                             ) : filteredTasks.map(t => (
-                                                <tr key={t.id} className="group hover:bg-blue-50/50 transition-colors">
+                                                <tr key={t.id} className="group hover:bg-blue-50/50 transition-colors cursor-default">
                                                     <td className="p-5">
-                                                        <div className="font-bold text-slate-800 text-base">{t.campaign_name}</div>
-                                                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><Icon name="User" size={10} /> {t.requester}</div>
+                                                        <div className="font-bold text-slate-800 text-base group-hover:text-zignal-blue transition-colors">{t.campaign_name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-1"><Icon name="User" size={10} /> {t.requester}</div>
                                                     </td>
                                                     <td className="p-5">
-                                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100">{t.status}</span>
+                                                        <span className="px-3 py-1 rounded-lg text-[9px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100 shadow-sm">{t.status}</span>
                                                     </td>
-                                                    <td className="p-5">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${t.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>{t.priority}</span>
+                                                    <td className="p-5 text-center">
+                                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase border shadow-sm ${t.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>{t.priority}</span>
                                                     </td>
-                                                    <td className="p-5 text-right font-mono text-xs text-slate-500 font-bold">{t.deadline}</td>
+                                                    <td className="p-5 text-right font-mono text-xs text-slate-500 font-black tracking-tighter">{t.deadline}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -186,46 +194,47 @@
                         </div>
                     </main>
 
+                    {/* Modal de Creación */}
                     {isModalOpen && (
-                        <div className="fixed inset-0 bg-zignal-dark/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 fade-in">
-                            <form onSubmit={handleSave} className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200">
-                                <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="Database" className="text-zignal-blue" /> GUARDAR EN NUBE</h2>
-                                    <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="XCircle" size={24} /></button>
+                        <div className="fixed inset-0 bg-zignal-dark/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4 md:p-10 fade-in">
+                            <form onSubmit={handleSave} className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200">
+                                <div className="p-6 bg-slate-50 border-b flex justify-between items-center px-8">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-3"><Icon name="CloudUpload" className="text-zignal-blue" /> GUARDAR EN NUBE</h2>
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="bg-white p-2 rounded-full border border-slate-200 text-slate-400 hover:text-red-500 transition-colors shadow-sm"><Icon name="X" size={20} /></button>
                                 </div>
                                 
-                                <div className="p-8 space-y-5">
+                                <div className="p-8 space-y-6">
                                     <div>
-                                        <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Nombre de Campaña *</label>
-                                        <input name="campaign" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-zignal-blue outline-none transition-all font-medium" placeholder="Ej: Proyecto Verano" />
+                                        <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400 mb-2 block ml-1">Campaña *</label>
+                                        <input name="campaign" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-zignal-blue focus:bg-white outline-none transition-all font-bold text-slate-700" placeholder="Nombre de la campaña..." />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-5">
                                         <div>
-                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Solicitante</label>
-                                            <select name="requester" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Zignal</option><option>Ventas</option></select>
+                                            <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400 mb-2 block ml-1">Solicitante</label>
+                                            <select name="requester" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-bold text-slate-600 appearance-none"><option>Zignal</option><option>Publicidad</option><option>Ventas</option></select>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Formato</label>
-                                            <select name="format" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Post</option><option>Reel</option><option>Story</option></select>
+                                            <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400 mb-2 block ml-1">Formato</label>
+                                            <select name="format" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-bold text-slate-600 appearance-none"><option>Post</option><option>Reel</option><option>Story</option></select>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Prioridad</label>
-                                            <select name="priority" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Medium</option><option>High</option><option>Low</option></select>
+                                    <div className="grid grid-cols-3 gap-5">
+                                        <div className="col-span-1">
+                                            <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400 mb-2 block ml-1">Prioridad</label>
+                                            <select name="priority" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-bold text-slate-600 appearance-none"><option>Medium</option><option>High</option><option>Low</option></select>
                                         </div>
-                                        <div>
-                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Fecha Entrega *</label>
-                                            <input type="date" name="deadline" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none" />
+                                        <div className="col-span-2">
+                                            <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400 mb-2 block ml-1">Fecha Entrega *</label>
+                                            <input type="date" name="deadline" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none font-bold text-slate-600" />
                                         </div>
                                     </div>
 
                                     <input type="hidden" name="status" value="Pending" />
 
-                                    <button type="submit" className="w-full bg-zignal-dark text-white p-5 rounded-2xl font-black text-sm tracking-widest shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 active:scale-95">
-                                        <Icon name="CloudUpload" /> SINCRONIZAR AHORA
+                                    <button type="submit" className="w-full bg-zignal-blue text-white p-5 rounded-2xl font-black text-sm tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-600 transition-all flex items-center justify-center gap-3 active:scale-[0.98] mt-4">
+                                        <Icon name="Database" /> SINCRONIZAR AHORA
                                     </button>
                                 </div>
                             </form>
