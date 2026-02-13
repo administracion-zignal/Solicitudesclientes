@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Zignal Agency | Creative Dashboard</title>
+    <title>Zignal Agency | Creative Dashboard Pro</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -45,11 +45,6 @@
 
     <style>
         body { background-color: #F8FAFC; -webkit-tap-highlight-color: transparent; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -59,44 +54,32 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .calendar-day:active { transform: scale(0.98); }
-        
-        /* Mobile optimizaciones */
-        input, select, textarea { font-size: 16px !important; } /* Previene zoom en iOS */
+        input, select, textarea { font-size: 16px !important; } /* Previene zoom iOS */
     </style>
 </head>
-<body class="text-slate-800 antialiased pb-10">
+<body class="text-slate-800 antialiased pb-20">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- Mock Data ---
-        const initialData = [
-            { id: 1, dateRequest: '2026-02-10', requester: 'Dept. Publicidad', campaignName: 'Lanzamiento Q1', format: 'Reel', location: 'Instagram', description: 'Video dinámico mostrando los nuevos productos.', referenceLink: 'https://drive.google.com/ejemplo', deadline: '2026-02-15', includedInPlan: true, price: 0, status: 'In Progress', priority: 'High' },
-            { id: 2, dateRequest: '2026-02-11', requester: 'Zignal', campaignName: 'Promo San Valentín', format: 'Email', location: 'Email', description: 'Newsletter con descuentos.', referenceLink: '', deadline: '2026-02-13', includedInPlan: true, price: 0, status: 'Pending', priority: 'Medium' },
-            { id: 3, dateRequest: '2026-02-05', requester: 'Extra', campaignName: 'Evento Corporativo', format: 'Impreso', location: 'Brochure', description: 'Diseño de tríptico.', referenceLink: '', deadline: '2026-02-20', includedInPlan: false, price: 500, status: 'Waiting Approval', priority: 'Low' },
-            { id: 4, dateRequest: '2026-01-20', requester: 'Junta Directiva', campaignName: 'Reporte Anual', format: 'Post', location: 'LinkedIn', description: 'Resumen de logros.', referenceLink: '', deadline: '2026-01-30', includedInPlan: true, price: 0, status: 'Finalized', priority: 'High' },
-        ];
-
-        const initialEvents = {
-            '2026-02-14': [{ text: 'San Valentín', type: 'holiday' }],
-            '2026-02-28': [{ text: 'Cierre de Mes', type: 'admin' }],
-            '2026-03-08': [{ text: 'Día de la Mujer', type: 'holiday' }],
-            '2026-04-01': [{ text: 'Inicio Q2', type: 'campaign' }]
-        };
+        // --- SISTEMA DE PERSISTENCIA ---
+        // Clave para guardar en el navegador
+        const STORAGE_KEY_TASKS = 'zignal_tasks_v2';
+        const STORAGE_KEY_EVENTS = 'zignal_events_v2';
 
         // --- Simulación IA ---
         const callGemini = async (prompt) => {
             return new Promise((resolve) => {
                 setTimeout(() => {
                     const responses = [
-                        "Sugiero usar colores vibrantes y tipografía bold para destacar este mensaje.",
-                        "Idea: Crear una serie de 3 posts conectada visualmente (carrusel).",
-                        "Para este formato impreso, recuerda dejar márgenes de seguridad de 3mm.",
-                        "Optimizado: 'Impacta visualmente con un diseño minimalista y llamada a la acción clara.'"
+                        "Sugiero usar colores vibrantes y tipografía bold.",
+                        "Idea: Crear una serie de 3 posts conectada (carrusel).",
+                        "Recuerda dejar márgenes de seguridad de 3mm.",
+                        "Optimizado: 'Impacta visualmente con diseño minimalista.'"
                     ];
                     resolve(responses[Math.floor(Math.random() * responses.length)]);
-                }, 1000);
+                }, 800);
             });
         };
 
@@ -118,12 +101,12 @@
             return <span dangerouslySetInnerHTML={svgContent} className="inline-flex items-center justify-center" />;
         };
 
-        // --- Calendar Month ---
+        // --- Calendar Component ---
         const CalendarMonth = ({ year, month, events, onAddEvent }) => {
             const date = new Date(year, month, 1);
             const monthName = date.toLocaleString('es-ES', { month: 'long' });
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const startDay = date.getDay(); // 0 = Sunday
+            const startDay = date.getDay(); 
 
             const getEventStyle = (type) => {
                 switch(type) {
@@ -136,18 +119,18 @@
             };
 
             const days = [];
-            for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-24 md:h-28 bg-gray-50/30"></div>);
+            for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-24 bg-gray-50/30"></div>);
             
             for (let i = 1; i <= daysInMonth; i++) {
                 const dayKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const dayEvents = events[dayKey] || [];
                 
                 days.push(
-                    <div key={i} onClick={() => onAddEvent(dayKey)} className="h-24 md:h-28 border border-gray-100 bg-white hover:bg-blue-50/30 transition-all p-1 cursor-pointer flex flex-col relative group calendar-day">
+                    <div key={i} onClick={() => onAddEvent(dayKey)} className="h-24 border border-gray-100 bg-white hover:bg-blue-50/30 transition-all p-1 cursor-pointer flex flex-col relative group calendar-day">
                         <span className="text-[10px] font-bold text-gray-400 mb-1">{i}</span>
                         <div className="flex flex-col gap-1 overflow-y-auto custom-scrollbar flex-1">
                             {dayEvents.map((ev, idx) => (
-                                <div key={idx} className={`text-[8px] md:text-[9px] px-1 py-0.5 rounded-md truncate leading-tight ${getEventStyle(ev.type)}`}>
+                                <div key={idx} className={`text-[8px] px-1 py-0.5 rounded-md truncate leading-tight ${getEventStyle(ev.type)}`}>
                                     {ev.text}
                                 </div>
                             ))}
@@ -157,8 +140,8 @@
             }
 
             return (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col min-w-[300px]">
-                    <div className="bg-zignal-dark text-white p-2 md:p-3 text-center font-bold capitalize text-sm">{monthName} {year}</div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col min-w-[280px]">
+                    <div className="bg-zignal-dark text-white p-2 text-center font-bold capitalize text-sm">{monthName} {year}</div>
                     <div className="grid grid-cols-7 text-center text-[9px] font-bold uppercase text-gray-400 py-2 border-b bg-gray-50">
                         <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
                     </div>
@@ -169,11 +152,11 @@
             );
         };
 
-        // --- Modals ---
-        const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+        // --- Modales ---
+        const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, isPermanent }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm fade-in p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm fade-in p-4">
                     <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm border border-gray-100">
                         <div className="flex items-center gap-3 text-red-600 mb-4">
                             <Icon name="AlertTriangle" size={24} />
@@ -182,7 +165,9 @@
                         <p className="text-sm text-gray-600 mb-6">{message}</p>
                         <div className="flex justify-end gap-3">
                             <button onClick={onClose} className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 font-medium text-sm">Cancelar</button>
-                            <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium shadow-md text-sm">Eliminar</button>
+                            <button onClick={onConfirm} className={`px-4 py-2 rounded-lg text-white font-medium shadow-md text-sm ${isPermanent ? 'bg-red-800' : 'bg-red-600'}`}>
+                                {isPermanent ? 'Borrar Definitivamente' : 'Mover a Papelera'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -324,12 +309,11 @@
             );
         };
 
-        const StatCard = ({ title, value, icon, colorClass, subtext }) => (
+        const StatCard = ({ title, value, icon, colorClass }) => (
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{title}</p>
                     <h3 className="text-xl font-bold text-gray-800">{value}</h3>
-                    {subtext && <p className="text-[10px] text-gray-400">{subtext}</p>}
                 </div>
                 <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
                     <div className={colorClass.replace('bg-', 'text-')}><Icon name={icon} size={20} /></div>
@@ -339,25 +323,55 @@
 
         // --- Main App ---
         const App = () => {
-            const [tasks, setTasks] = useState(initialData);
-            const [view, setView] = useState('active');
+            // Inicializar estado vacío o desde LocalStorage
+            const [tasks, setTasks] = useState(() => {
+                const saved = localStorage.getItem(STORAGE_KEY_TASKS);
+                return saved ? JSON.parse(saved) : []; // Empieza vacío si no hay datos
+            });
+            const [calendarEvents, setCalendarEvents] = useState(() => {
+                const saved = localStorage.getItem(STORAGE_KEY_EVENTS);
+                return saved ? JSON.parse(saved) : {
+                     '2026-02-14': [{ text: 'San Valentín', type: 'holiday' }],
+                     '2026-04-01': [{ text: 'Inicio Q2', type: 'campaign' }]
+                };
+            });
+
+            const [view, setView] = useState('active'); // active, history, trash
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [currentTask, setCurrentTask] = useState(null);
-            const [deleteModal, setDeleteModal] = useState({ isOpen: false, taskId: null });
-            const [calendarEvents, setCalendarEvents] = useState(initialEvents);
+            const [deleteModal, setDeleteModal] = useState({ isOpen: false, taskId: null, isPermanent: false });
 
+            // GUARDAR AUTOMÁTICAMENTE EN LOCALSTORAGE AL CAMBIAR
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+            }, [tasks]);
+
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY_EVENTS, JSON.stringify(calendarEvents));
+            }, [calendarEvents]);
+
+            // Filtrado
             const filteredTasks = useMemo(() => {
-                const history = ['Approved', 'Finalized'];
-                return tasks.filter(t => view === 'active' ? !history.includes(t.status) : history.includes(t.status));
+                if (view === 'trash') return tasks.filter(t => t.status === 'Deleted');
+                
+                const historyStatus = ['Approved', 'Finalized'];
+                const trashStatus = ['Deleted'];
+                
+                return tasks.filter(t => {
+                    if (trashStatus.includes(t.status)) return false;
+                    const isHistory = historyStatus.includes(t.status);
+                    return view === 'active' ? !isHistory : isHistory;
+                });
             }, [tasks, view]);
 
+            // Calendario Merge (excluyendo eliminados)
             const mergedEvents = useMemo(() => {
                 const combined = { ...calendarEvents };
-                // Asegurar copia profunda de arrays
                 Object.keys(combined).forEach(key => combined[key] = [...combined[key]]);
                 
                 tasks.forEach(t => {
-                    if (t.status === 'Finalized') return;
+                    if (t.status === 'Finalized' || t.status === 'Deleted') return;
+                    
                     if (t.dateRequest) {
                         if (!combined[t.dateRequest]) combined[t.dateRequest] = [];
                         combined[t.dateRequest].push({ text: `🚀 ${t.campaignName}`, type: 'task-start' });
@@ -370,29 +384,91 @@
                 return combined;
             }, [tasks, calendarEvents]);
 
+            // Stats (Excluyendo eliminados)
             const stats = useMemo(() => {
-                const active = tasks.filter(t => !['Approved', 'Finalized'].includes(t.status)).length;
-                const pending = tasks.filter(t => t.status === 'Pending').length;
-                const high = tasks.filter(t => t.priority === 'High' && !['Approved', 'Finalized'].includes(t.status)).length;
-                const extra = tasks.reduce((acc, c) => acc + (!c.includedInPlan ? parseFloat(c.price || 0) : 0), 0);
+                const validTasks = tasks.filter(t => t.status !== 'Deleted');
+                const active = validTasks.filter(t => !['Approved', 'Finalized'].includes(t.status)).length;
+                const pending = validTasks.filter(t => t.status === 'Pending').length;
+                const high = validTasks.filter(t => t.priority === 'High' && !['Approved', 'Finalized'].includes(t.status)).length;
+                const extra = validTasks.reduce((acc, c) => acc + (!c.includedInPlan ? parseFloat(c.price || 0) : 0), 0);
                 return { active, pending, high, extra };
             }, [tasks]);
 
+            // Funciones Exportar/Importar
+            const exportData = () => {
+                const dataStr = JSON.stringify(tasks);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = `zignal_backup_${new Date().toISOString().slice(0,10)}.json`;
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            };
+
+            const importData = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = e => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.readAsText(file,'UTF-8');
+                    reader.onload = readerEvent => {
+                        try {
+                            const content = JSON.parse(readerEvent.target.result);
+                            if (Array.isArray(content)) {
+                                if(confirm('¿Sobrescribir datos actuales con la copia de seguridad?')) {
+                                    setTasks(content);
+                                    alert('Datos cargados exitosamente.');
+                                }
+                            } else {
+                                alert('Archivo no válido');
+                            }
+                        } catch (err) { alert('Error al leer archivo'); }
+                    }
+                }
+                input.click();
+            }
+
+            // CRUD
+            const handleDeleteRequest = (id) => {
+                if (view === 'trash') {
+                    setDeleteModal({ isOpen: true, taskId: id, isPermanent: true });
+                } else {
+                    setDeleteModal({ isOpen: true, taskId: id, isPermanent: false });
+                }
+            };
+
+            const executeDelete = () => {
+                if (deleteModal.isPermanent) {
+                    setTasks(prev => prev.filter(t => t.id !== deleteModal.taskId));
+                } else {
+                    setTasks(prev => prev.map(t => t.id === deleteModal.taskId ? { ...t, status: 'Deleted' } : t));
+                }
+                setDeleteModal({ isOpen: false, taskId: null, isPermanent: false });
+            };
+
+            const restoreTask = (id) => {
+                setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'Pending' } : t));
+            };
+
             return (
                 <div className="min-h-screen">
-                    {/* Header Mobile Friendly */}
+                    {/* Header */}
                     <div className="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-zignal-dark rounded flex items-center justify-center text-white"><Icon name="Zap" size={18} /></div>
                             <h1 className="text-lg font-bold leading-none hidden sm:block">Zignal Agency</h1>
                         </div>
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-zignal-blue to-zignal-cyan border-2 border-white shadow"></div>
+                        <div className="flex gap-2">
+                            <button onClick={exportData} title="Guardar Copia" className="p-2 text-gray-500 hover:text-blue-600 bg-gray-50 rounded-lg border border-gray-200"><Icon name="Download" size={18} /></button>
+                            <button onClick={importData} title="Cargar Copia" className="p-2 text-gray-500 hover:text-green-600 bg-gray-50 rounded-lg border border-gray-200"><Icon name="Upload" size={18} /></button>
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-zignal-blue to-zignal-cyan border-2 border-white shadow ml-2"></div>
                         </div>
                     </div>
 
                     <div className="max-w-7xl mx-auto p-4 space-y-6">
-                        {/* Stats Mobile Grid */}
+                        {/* Stats */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             <StatCard title="Activas" value={stats.active} icon="Zap" colorClass="bg-blue-500" />
                             <StatCard title="Pendientes" value={stats.pending} icon="Clock" colorClass="bg-amber-500" />
@@ -402,16 +478,19 @@
 
                         {/* Toolbar */}
                         <div className="flex flex-col sm:flex-row justify-between gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="flex bg-gray-100 p-1 rounded-lg self-start">
-                                <button onClick={() => setView('active')} className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'active' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Activas</button>
-                                <button onClick={() => setView('history')} className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'history' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>Historial</button>
+                            <div className="flex bg-gray-100 p-1 rounded-lg self-start overflow-x-auto max-w-full">
+                                <button onClick={() => setView('active')} className={`whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'active' ? 'bg-white shadow-sm text-zignal-dark' : 'text-gray-500'}`}>Activas</button>
+                                <button onClick={() => setView('history')} className={`whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold uppercase ${view === 'history' ? 'bg-white shadow-sm text-zignal-dark' : 'text-gray-500'}`}>Historial</button>
+                                <button onClick={() => setView('trash')} className={`whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold uppercase flex items-center gap-1 ${view === 'trash' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-500'}`}>
+                                    <Icon name="Trash" size={12} /> Papelera
+                                </button>
                             </div>
                             <button onClick={() => { setCurrentTask(null); setIsModalOpen(true); }} className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zignal-dark text-white text-sm font-medium shadow-md active:scale-95 transition-transform">
                                 <Icon name="Plus" size={16} /> Nueva Solicitud
                             </button>
                         </div>
 
-                        {/* Table Scrollable Container */}
+                        {/* Table */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left whitespace-nowrap">
@@ -427,9 +506,11 @@
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 text-sm">
                                         {filteredTasks.length === 0 ? (
-                                            <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Sin tareas</td></tr>
+                                            <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                                {view === 'trash' ? 'Papelera vacía' : 'Sin tareas. ¡Agrega una nueva!'}
+                                            </td></tr>
                                         ) : filteredTasks.map(t => (
-                                            <tr key={t.id} onClick={() => { setCurrentTask(t); setIsModalOpen(true); }} className="hover:bg-blue-50 active:bg-blue-100 transition-colors cursor-pointer">
+                                            <tr key={t.id} onClick={() => { if(view !== 'trash') { setCurrentTask(t); setIsModalOpen(true); } }} className={`transition-colors ${view === 'trash' ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50 cursor-pointer'}`}>
                                                 <td className="px-4 py-3">
                                                     <p className="font-bold text-gray-800">{t.campaignName}</p>
                                                     <p className="text-xs text-gray-500">{t.requester}</p>
@@ -445,6 +526,7 @@
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                                                        t.status === 'Deleted' ? 'bg-red-100 text-red-700 border-red-200' :
                                                         t.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
                                                         t.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                                                         t.status === 'Finalized' ? 'bg-gray-800 text-white border-gray-800' :
@@ -457,9 +539,16 @@
                                                     }`}>{t.priority}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
-                                                    <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, taskId: t.id }); }} className="p-2 bg-gray-100 rounded text-gray-500 hover:text-red-500">
-                                                        <Icon name="Trash2" size={16} />
-                                                    </button>
+                                                    <div className="flex justify-end gap-2">
+                                                        {view === 'trash' ? (
+                                                            <button onClick={(e) => { e.stopPropagation(); restoreTask(t.id); }} className="p-2 bg-white border border-green-200 rounded text-green-600 hover:bg-green-50" title="Restaurar">
+                                                                <Icon name="RefreshCcw" size={16} />
+                                                            </button>
+                                                        ) : null}
+                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteRequest(t.id); }} className="p-2 bg-white border border-gray-200 rounded text-gray-500 hover:text-red-500 hover:bg-red-50">
+                                                            <Icon name="Trash2" size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -468,11 +557,11 @@
                             </div>
                         </div>
 
-                        {/* Calendar Mobile Horizontal Scroll */}
+                        {/* Calendar */}
                         <div>
                             <h2 className="text-md font-bold text-gray-800 mb-3 flex items-center gap-2"><Icon name="Calendar" size={18} /> Calendario 2026</h2>
                             <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-                                <div className="snap-center"><CalendarMonth year={2026} month={1} events={mergedEvents} onAddEvent={(d) => { if(confirm('Agregar evento?')) setCalendarEvents(p => ({...p, [d]: [...(p[d]||[]), {text:'Nota', type:'admin'}]})) }} /></div>
+                                <div className="snap-center"><CalendarMonth year={2026} month={1} events={mergedEvents} onAddEvent={(d) => { if(confirm('Agregar nota?')) setCalendarEvents(p => ({...p, [d]: [...(p[d]||[]), {text:'Nota', type:'admin'}]})) }} /></div>
                                 <div className="snap-center"><CalendarMonth year={2026} month={2} events={mergedEvents} onAddEvent={()=>{}} /></div>
                                 <div className="snap-center"><CalendarMonth year={2026} month={3} events={mergedEvents} onAddEvent={()=>{}} /></div>
                             </div>
@@ -484,10 +573,14 @@
                         setIsModalOpen(false);
                     }} task={currentTask} />
                     
-                    <ConfirmModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({isOpen:false})} onConfirm={() => {
-                        setTasks(p => p.filter(t => t.id !== deleteModal.taskId));
-                        setDeleteModal({isOpen:false});
-                    }} title="Borrar?" message="No podrás recuperar esta tarea." />
+                    <ConfirmModal 
+                        isOpen={deleteModal.isOpen} 
+                        onClose={() => setDeleteModal({isOpen:false})} 
+                        onConfirm={executeDelete} 
+                        title={deleteModal.isPermanent ? "Borrar Definitivamente" : "Mover a Papelera"} 
+                        message={deleteModal.isPermanent ? "Esta acción NO se puede deshacer." : "La tarea se moverá a la Papelera. Podrás restaurarla luego."}
+                        isPermanent={deleteModal.isPermanent}
+                    />
                 </div>
             );
         };
