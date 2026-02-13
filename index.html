@@ -590,3 +590,33 @@
     </script>
 </body>
 </html>
+// 1. Importar la librería desde CDN
+const { createClient } = supabase;
+
+// 2. Configurar la conexión (Usa los datos de tu imagen image_cd4ee2.png)
+const supabaseUrl = 'TU_PROJECT_URL';
+const supabaseKey = 'TU_ANON_KEY';
+const supabaseClient = createClient(supabaseUrl, supabaseKey); 
+const handleGuardar = async (nuevaSolicitud) => {
+    const { data, error } = await supabaseClient
+        .from('solicitudes')
+        .insert([{
+            campaign_name: nuevaSolicitud.campaignName,
+            status: nuevaSolicitud.status,
+            priority: nuevaSolicitud.priority,
+            requester: nuevaSolicitud.requester,
+            format: nuevaSolicitud.format,
+            deadline: nuevaSolicitud.deadline,
+            request_date: nuevaSolicitud.dateRequest,
+            description: nuevaSolicitud.description,
+            reference_link: nuevaSolicitud.referenceLink,
+            included_in_plan: nuevaSolicitud.includedInPlan
+        }]);
+
+    if (error) {
+        console.error("Error al sincronizar:", error.message);
+        alert("Error al guardar en la nube.");
+    } else {
+        alert("¡Solicitud guardada y sincronizada con el equipo!");
+    }
+}; 
