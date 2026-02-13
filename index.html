@@ -13,7 +13,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
-    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -28,9 +27,7 @@
                             blue: '#0066FF', 
                             cyan: '#00E5FF', 
                             dark: '#0B1120', 
-                            light: '#F0F9FF', 
-                            gray: '#1E293B', 
-                            danger: '#EF4444' 
+                            gray: '#1E293B'
                         } 
                     }
                 }
@@ -52,13 +49,12 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- 3. CONFIGURACIÓN DE TU NUBE (SUPABASE) ---
-        // Reemplaza los valores entre comillas con los de tu imagen ce955e
+        // --- CONFIGURACIÓN DE CONEXIÓN REAL ---
         const SUPABASE_URL = 'https://vknnukcicqkufdhutuip.supabase.co'; 
-        const SUPABASE_KEY = 'https://vknnukcicqkufdhutuip.supabase.co'; // Valor de "anon public"
+        // SUSTITUYE 'TU_API_KEY_AQUI' POR LA CLAVE LARGA QUE COPIASTE (LA QUE EMPIEZA POR eyJ...)
+        const SUPABASE_KEY = 'TU_API_KEY_AQUI'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Componente de Iconos
         const Icon = ({ name, size = 18, className = "" }) => {
             const svg = useMemo(() => {
                 if (!window.lucide || !window.lucide.icons[name]) return null;
@@ -76,7 +72,6 @@
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [loading, setLoading] = useState(true);
 
-            // 4. CARGAR DATOS DESDE LA BASE DE DATOS
             const fetchTasks = async () => {
                 const { data, error } = await supabaseClient
                     .from('solicitudes')
@@ -89,8 +84,6 @@
 
             useEffect(() => {
                 fetchTasks();
-
-                // 5. TIEMPO REAL: Si alguien cambia algo en otro PC, esto se actualiza solo
                 const channel = supabaseClient
                     .channel('schema-db-changes')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes' }, () => {
@@ -101,7 +94,6 @@
                 return () => supabaseClient.removeChannel(channel);
             }, []);
 
-            // 6. GUARDAR NUEVA SOLICITUD EN LA NUBE
             const handleSave = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
@@ -113,16 +105,16 @@
                     requester: formData.get('requester'),
                     format: formData.get('format'),
                     deadline: formData.get('deadline'),
-                    description: formData.get('description')
+                    description: formData.get('description') || ''
                 };
 
                 const { error } = await supabaseClient.from('solicitudes').insert([nuevaTarea]);
 
                 if (error) {
-                    alert("Error al sincronizar: " + error.message);
+                    alert("Error de conexión: " + error.message);
                 } else {
                     setIsModalOpen(false);
-                    fetchTasks(); // Actualiza la lista
+                    fetchTasks();
                 }
             };
 
@@ -130,36 +122,33 @@
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    {/* Header Pro */}
                     <header className="bg-zignal-dark text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
                         <div className="flex items-center gap-3">
-                            <div className="bg-zignal-blue p-2 rounded-lg shadow-inner"><Icon name="Zap" size={20} /></div>
-                            <h1 className="text-xl font-extrabold tracking-tight">ZIGNAL AGENCY <span className="text-zignal-cyan text-xs ml-1 font-mono uppercase">Cloud v2</span></h1>
+                            <div className="bg-zignal-blue p-2 rounded-lg"><Icon name="Zap" size={20} /></div>
+                            <h1 className="text-xl font-extrabold tracking-tight">ZIGNAL AGENCY <span className="text-zignal-cyan text-xs ml-1">CLOUD PRO</span></h1>
                         </div>
                         <div className="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-green-400">En Línea</span>
+                            <span className="text-[10px] font-bold uppercase text-green-400">Sincronizado</span>
                         </div>
                     </header>
 
                     <main className="max-w-6xl mx-auto w-full p-4 md:p-8 space-y-6">
-                        {/* Control Panel */}
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border shadow-sm">
                             <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
                                 <button onClick={() => setView('active')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'active' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>TAREAS ACTIVAS</button>
                                 <button onClick={() => setView('history')} className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-bold transition-all ${view === 'history' ? 'bg-white shadow-md text-zignal-blue' : 'text-slate-500'}`}>HISTORIAL</button>
                             </div>
-                            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto bg-zignal-blue hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                            <button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto bg-zignal-blue hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
                                 <Icon name="PlusCircle" /> NUEVA SOLICITUD
                             </button>
                         </div>
 
-                        {/* Listado Principal */}
                         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
                             {loading ? (
                                 <div className="p-20 text-center flex flex-col items-center gap-4">
                                     <div className="w-10 h-10 border-4 border-zignal-blue border-t-transparent rounded-full animate-spin"></div>
-                                    <p className="text-slate-400 font-medium">Conectando con la base de datos...</p>
+                                    <p className="text-slate-400 font-medium">Accediendo a la nube...</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
@@ -174,12 +163,12 @@
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {filteredTasks.length === 0 ? (
-                                                <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic font-medium">No hay registros en la nube actualmente</td></tr>
+                                                <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic font-medium">No hay registros almacenados</td></tr>
                                             ) : filteredTasks.map(t => (
                                                 <tr key={t.id} className="group hover:bg-blue-50/50 transition-colors">
                                                     <td className="p-5">
                                                         <div className="font-bold text-slate-800 text-base">{t.campaign_name}</div>
-                                                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><Icon name="User" size={10} /> {t.requester || 'Sin asignar'}</div>
+                                                        <div className="text-xs text-slate-400 flex items-center gap-1 mt-1"><Icon name="User" size={10} /> {t.requester}</div>
                                                     </td>
                                                     <td className="p-5">
                                                         <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-blue-50 text-blue-600 border-blue-100">{t.status}</span>
@@ -197,13 +186,57 @@
                         </div>
                     </main>
 
-                    {/* Modal Pro Sincronizado */}
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-zignal-dark/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 fade-in">
                             <form onSubmit={handleSave} className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200">
                                 <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="CloudUpload" className="text-zignal-blue" /> CREAR EN LA NUBE</h2>
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="Database" className="text-zignal-blue" /> GUARDAR EN NUBE</h2>
                                     <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="XCircle" size={24} /></button>
                                 </div>
                                 
-                                <div className="p-
+                                <div className="p-8 space-y-5">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Nombre de Campaña *</label>
+                                        <input name="campaign" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-zignal-blue outline-none transition-all font-medium" placeholder="Ej: Proyecto Verano" />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Solicitante</label>
+                                            <select name="requester" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Zignal</option><option>Ventas</option></select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Formato</label>
+                                            <select name="format" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Post</option><option>Reel</option><option>Story</option></select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Prioridad</label>
+                                            <select name="priority" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none"><option>Medium</option><option>High</option><option>Low</option></select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Fecha Entrega *</label>
+                                            <input type="date" name="deadline" required className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none" />
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" name="status" value="Pending" />
+
+                                    <button type="submit" className="w-full bg-zignal-dark text-white p-5 rounded-2xl font-black text-sm tracking-widest shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3 active:scale-95">
+                                        <Icon name="CloudUpload" /> SINCRONIZAR AHORA
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
